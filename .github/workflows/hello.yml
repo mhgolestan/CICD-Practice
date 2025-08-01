@@ -15,3 +15,6 @@ jobs:
       - name: Display the date
         run: date "+%A, %B %d, %Y at %T"
 
+      - name: Directory content
+        run: ls -l
+
