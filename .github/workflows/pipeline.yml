@@ -33,6 +33,7 @@ jobs:
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
 
   tag_release:
+    if: ${{ github.event_name == 'push' }}
     needs: [simple_deployment_pipeline]
     runs-on: ubuntu-22.04
     steps:
