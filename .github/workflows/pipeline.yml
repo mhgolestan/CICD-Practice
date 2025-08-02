@@ -31,11 +31,3 @@ jobs:
       - name: Trigger deployment with deploy hook
         if: ${{ github.event_name == 'push' }}
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-      - name: Just for PR
-        run: echo "PR test"
-#      - name: Trigger deployment with custom action
-#        uses: sws2apps/render-deployment@main
-#        with:
-#          serviceId: ${{ secrets.RENDER_SERVICE_ID }}
-#          apiKey: ${{ secrets.RENDER_API_KEY }}
-#          multipleDeployment: false
