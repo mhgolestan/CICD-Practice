@@ -31,6 +31,8 @@ jobs:
       - name: Trigger deployment with deploy hook
         if: success()
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      - name: Just for PR
+        run: echo "PR test"
 #      - name: Trigger deployment with custom action
 #        uses: sws2apps/render-deployment@main
 #        with:
