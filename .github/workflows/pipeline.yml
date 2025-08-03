@@ -32,15 +32,19 @@ jobs:
         if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip') }}
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
       - name: Notify Discord on Failure
-        uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f
-        if: ${{ failure() }}
+        if: failure()
+        uses: sarisia/actions-status-discord@v1.15.3
         with:
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-          severity: error
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "❌ Build Failed"
-          description: "Build failed in ${{ github.repository }}"
+          description: |
+            Build failed in ${{ github.repository }}
+            Commit: ${{ github.sha }}
           color: 0xFF0000
           username: GitHub Actions
+          status: failure
+
+
 
 
   tag_release:
@@ -57,12 +61,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
       - name: Notify Discord on Success
-        uses: rjstone/discord-webhook-notify@c2597273488aeda841dd1e891321952b51f7996f
-        if: ${{ success() }}
+        uses: sarisia/actions-status-discord@v1.15.3
         with:
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-          severity: info
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "✅ New Version Deployed"
-          description: "Successfully deployed version ${{ steps.tag.outputs.new_tag }} to production"
+          description: |
+            Successfully deployed version ${{ steps.tag.outputs.new_tag }} to production
+            Commit: ${{ github.sha }}
           color: 0x00FF00
           username: GitHub Actions
+          status: success
+
