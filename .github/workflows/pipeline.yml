@@ -1,37 +1,56 @@
-name: Deployment pipeline
+name: Deployment Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches: [main]
-    types: [opened, synchronize]
+    branches: [ main ]
+    types: [ opened, synchronize ]
 
 jobs:
-  simple_deployment_pipeline:
+  verify_and_build:
+    name: 'Verify and Build'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
-        run: npm install
-      - name: Check style
+
+      - name: Setup Application
+        run: |
+          npm install
+          npx playwright install --with-deps
+
+      - name: Code Quality Checks
         run: npm run eslint
-      - name: Run unit and integration tests
-        run: npm run test
-      - name: Build
+
+      - name: Test Suite
+        run: |
+          npm run test
+          npm run test:e2e
+
+      - name: Build Application
         run: npm run build
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-      - name: Run e2e tests
-        run: npm run test:e2e
-      - name: Trigger deployment with deploy hook
+
+      - name: Deploy to Production
         if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip') }}
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-      - name: Notify Discord on Failure
+
+      - name: Notify Build Success
+        if: success()
+        uses: sarisia/actions-status-discord@v1.15.3
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: "✅ Build Successful"
+          description: |
+            Build succeeded in ${{ github.repository }}
+            Commit: ${{ github.sha }}
+          color: 0x00FF00
+          username: GitHub Actions
+          status: success
+
+      - name: Notify Build Failure
         if: failure()
         uses: sarisia/actions-status-discord@v1.15.3
         with:
@@ -44,27 +63,29 @@ jobs:
           username: GitHub Actions
           status: failure
 
-
-
-
-  tag_release:
+  create_release:
+    name: 'Create Release'
     if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip') }}
-    needs: [simple_deployment_pipeline]
+    needs: [ verify_and_build ]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
-      - name: Bump version and push tag
+
+      - name: Create Version Tag
+        id: tag
         uses: anothrNick/github-tag-action@e528bc2b9628971ce0e6f823f3052d1dcd9d512c
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
-      - name: Notify Discord on Success
+
+      - name: Notify Release Success
+        if: success()
         uses: sarisia/actions-status-discord@v1.15.3
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "✅ New Version Deployed"
+          title: "✅ Release Successful"
           description: |
             Successfully deployed version ${{ steps.tag.outputs.new_tag }} to production
             Commit: ${{ github.sha }}
@@ -72,3 +93,15 @@ jobs:
           username: GitHub Actions
           status: success
 
+      - name: Notify Release Failure
+        if: failure()
+        uses: sarisia/actions-status-discord@v1.15.3
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: "❌ Release Failed"
+          description: |
+            Release failed for ${{ github.repository }}
+            Commit: ${{ github.sha }}
+          color: 0xFF0000
+          username: GitHub Actions
+          status: failure
