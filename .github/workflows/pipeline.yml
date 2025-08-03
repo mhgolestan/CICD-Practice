@@ -1,28 +1,21 @@
 name: Deployment Pipeline
 
-env:
-  NODE_VERSION: '20'
-  UBUNTU_VERSION: 'ubuntu-22.04'
-  DISCORD_NOTIFICATION_VERSION: 'sarisia/actions-status-discord@v1.15.3'
-  GITHUB_TAG_ACTION: 'anothrNick/github-tag-action@e528bc2b9628971ce0e6f823f3052d1dcd9d512c'
-  SKIP_TAG: '#skip'
-
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
-    types: [opened, synchronize]
+    branches: [ main ]
+    types: [ opened, synchronize ]
 
 jobs:
   verify_and_build:
     name: 'Verify and Build'
-    runs-on: ${{ env.UBUNTU_VERSION }}
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
 
       - name: Setup Application
         run: |
@@ -41,12 +34,12 @@ jobs:
         run: npm run build
 
       - name: Deploy to Production
-        if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, env.SKIP_TAG) }}
+        if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip') }}
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
 
       - name: Notify Build Success
         if: success()
-        uses: ${{ env.DISCORD_NOTIFICATION_VERSION }}
+        uses: sarisia/actions-status-discord@v1.15.3
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "✅ Build Successful"
@@ -59,7 +52,7 @@ jobs:
 
       - name: Notify Build Failure
         if: failure()
-        uses: ${{ env.DISCORD_NOTIFICATION_VERSION }}
+        uses: sarisia/actions-status-discord@v1.15.3
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "❌ Build Failed"
@@ -72,9 +65,9 @@ jobs:
 
   create_release:
     name: 'Create Release'
-    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, env.SKIP_TAG) }}
-    needs: [verify_and_build]
-    runs-on: ${{ env.UBUNTU_VERSION }}
+    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip') }}
+    needs: [ verify_and_build ]
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -82,14 +75,14 @@ jobs:
 
       - name: Create Version Tag
         id: tag
-        uses: ${{end.GITHUB_TAG_ACTION}}
+        uses: anothrNick/github-tag-action@e528bc2b9628971ce0e6f823f3052d1dcd9d512c
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
 
       - name: Notify Release Success
         if: success()
-        uses: ${{ env.DISCORD_NOTIFICATION_VERSION }}
+        uses: sarisia/actions-status-discord@v1.15.3
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "✅ Release Successful"
@@ -102,7 +95,7 @@ jobs:
 
       - name: Notify Release Failure
         if: failure()
-        uses: ${{ env.DISCORD_NOTIFICATION_VERSION }}
+        uses: sarisia/actions-status-discord@v1.15.3
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           title: "❌ Release Failed"
